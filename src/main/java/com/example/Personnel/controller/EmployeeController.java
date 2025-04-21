@@ -1,11 +1,16 @@
 package com.example.Personnel.controller;
 import com.example.Personnel.model.Employee;
 import com.example.Personnel.service.EmployeeService;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -47,18 +52,51 @@ public class EmployeeController {
     public ResponseEntity<Employee> updateEmployee(
             @PathVariable("id") Long id,
             @RequestBody Employee employee) {
-
-        // Optionnel : vérifier si l'employé avec l'ID donné existe
         Optional<Employee> existingEmployee = employeeService.getEmployeeById(id);
         if (existingEmployee.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        // Mettre à jour l'employé avec les nouvelles informations
-        employee.setId(id);  // S'assurer que l'ID de l'objet est le même que celui dans l'URL
+        employee.setId(id);
         Employee updatedEmployee = employeeService.addEmployee(employee);
 
         return ResponseEntity.ok(updatedEmployee);
+    }
+    @PatchMapping("/{id}")
+    public ResponseEntity<Employee> patchEmployee(
+            @PathVariable("id") Long id,
+            @RequestBody Map<String, Object> changes) {
+        Optional<Employee> existingEmployee = employeeService.getEmployeeById(id);
+        if (existingEmployee.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (changes.containsKey("name")) {
+            existingEmployee.get().setName(changes.get("name").toString());
+        }
+        if (changes.containsKey("position")) {
+            existingEmployee.get().setPosition(changes.get("position").toString());
+        }
+        if (changes.containsKey("salary")) {
+            existingEmployee.get().setSalary(Double.parseDouble(changes.get("salary").toString()));
+        }
+
+        Employee updatedEmployee = employeeService.addEmployee(existingEmployee.get());
+
+        return ResponseEntity.ok(updatedEmployee);
+    }
+    @RequestMapping("/{id}")
+    public void findEmployee(@PathVariable("id") long id) {
+        Optional<Employee> employee = employeeService.getEmployeeById(id);
+        if (employee.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Employee not found");
+        }
+    }
+    @RequestMapping(method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> handleOptions() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Allow", "GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD");
+        return ResponseEntity.ok().headers(headers).build();
     }
 }
 
